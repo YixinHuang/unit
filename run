@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# Unit test shell
+# opt
+
+if [ `uname` == "AIX" ];then
+	ostype=aix
+	CC=xlc	
+else
+	ostype=linux
+	CC=gcc		
+fi
+
+export HOME_PATH=/bqmp/hyx
+
+usage()
+{
+  echo "os type:" $ostype
+  echo "current path:" $HOME_PATH
+  echo "current CC:" $CC  
+	echo "usage: run \"unitname\" make "
+	echo "usage: run \"unitname\"  "
+}
+
+
+if [ $# -eq 0 ] 
+then
+	usage
+	exit 1
+fi
+
+if [ $# -eq 1 ] 
+then
+	UNAME=$1
+	echo "run unit $UNAME"
+	./bin/$UNAME
+
+	exit 1
+fi
+
+
+if [ $# -eq 2 ] 
+then
+	UNAME=$1
+	MAKE=$2
+	cd ./$UNAME
+	$MAKE 
+	cd ..
+	exit 1
+fi
