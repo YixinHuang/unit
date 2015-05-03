@@ -1,0 +1,38 @@
+ngx_log
+宏：
+#if (NGX_HAVE_C99_VARIADIC_MACROS)
+#define NGX_HAVE_VARIADIC_MACROS  1
+
+
+核心原始函数：
+
+ngx_log_error_core(ngx_uint_t level, ngx_log_t *log, ngx_err_t err,
+    const char *fmt, ...)
+    
+
+初始化函数：
+
+
+
+使用static ngx_log_t        ngx_log;
+ngx_log_init(u_char *prefix)    
+
+动态分配：
+ngx_log_create(ngx_cycle_t *cycle, ngx_str_t *name)
+
+
+设置级别
+ngx_log_set_levels(ngx_conf_t *cf, ngx_log_t *log)
+
+注意当使用NGX_LOG_DEBUG，代码中实际使用的宏是 #define NGX_LOG_DEBUG_ALL         0x7ffffff0
+
+
+使用error，只要输入的LEVEL大于配置的就可输出
+#define ngx_log_error(level, log, ...)                                        \
+    if ((log)->log_level >= level) ngx_log_error_core(level, log, __VA_ARGS__)
+
+
+使用debug，是与的关系，只有输入的LEVEL等于配置的可输出 用于判断模块
+#define ngx_log_debug(level, log, ...)                                        \
+    if ((log)->log_level & level)                                             \
+        ngx_log_error_core(NGX_LOG_DEBUG, log, __VA_ARGS__)

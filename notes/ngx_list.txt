@@ -1,0 +1,81 @@
+
+
+struct ngx_list_part_s {
+    void             *elts;
+    ngx_uint_t        nelts;
+    ngx_list_part_t  *next;
+};
+
+
+typedef struct {
+    ngx_list_part_t  *last;
+    ngx_list_part_t   part;
+    size_t            size;
+    ngx_uint_t        nalloc;
+    ngx_pool_t       *pool;
+} ngx_list_t;
+
+
+===========================ngx_list_create===========================================
+
+
+1、分配LIST
+
+    list = ngx_palloc(pool, sizeof(ngx_list_t));
+    if (list == NULL) {
+        return NULL;
+    }
+
+2、分配n * size 
+    list->part.elts = ngx_palloc(pool, n * size);
+    list->part.nelts = 0;
+    list->part.next = NULL;   
+    
+3、初始化
+
+    list->last = &list->part;
+
+4、 保存 List的数量和大小    
+    list->size = size;
+    list->nalloc = n;
+
+
+===========================ngx_list_init===========================================
+唯一与ngx_list_create不同的是LIST变量不是在POOL内分配的，而是已经分配好的，直接使用了
+
+===========================ngx_list_push===========================================
+1、取出当前最后的List
+
+    last = l->last;
+2、判断当前List的数量是否到达预先设置的值    
+
+    if (last->nelts == l->nalloc) {
+3、若相等则表示已经满了，初始化的内存已用完，需要分配一个 ngx_list_part_t   
+
+        /* the last part is full, allocate a new list part */
+
+        last = ngx_palloc(l->pool, sizeof(ngx_list_part_t));
+        if (last == NULL) {
+            return NULL;
+        }
+4、分配n * size   
+        last->elts = ngx_palloc(l->pool, l->nalloc * l->size);
+        if (last->elts == NULL) {
+            return NULL;
+        }
+5、重新设置 nelts，next
+        last->nelts = 0;
+        last->next = NULL;
+将新申请的ngx_list_part_t 加入list 
+        l->last->next = last;
+        l->last = last;
+    }
+    
+6、返回地址
+    elt = (char *) last->elts + l->size * last->nelts;
+7、增加个数    
+    last->nelts++;
+
+    return elt;
+    
+    

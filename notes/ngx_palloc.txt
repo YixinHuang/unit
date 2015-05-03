@@ -1,0 +1,191 @@
+
+ngx_alloc :在ngx_alloc.c 中包装
+
+typedef struct ngx_pool_s        ngx_pool_t;
+
+struct ngx_pool_s {
+    ngx_pool_data_t       d;
+    size_t                max;
+    ngx_pool_t           *current;
+    ngx_chain_t          *chain;
+    ngx_pool_large_t     *large;
+    ngx_pool_cleanup_t   *cleanup;
+    ngx_log_t            *log;
+};
+
+typedef struct {
+    u_char               *last;
+    u_char               *end;
+    ngx_pool_t           *next;
+    ngx_uint_t            failed;
+} ngx_pool_data_t;
+
+struct ngx_chain_s {
+    ngx_buf_t    *buf;
+    ngx_chain_t  *next;
+};
+
+typedef struct ngx_pool_large_s  ngx_pool_large_t;
+struct ngx_pool_large_s {
+    ngx_pool_large_t     *next;
+    void                 *alloc;
+};
+
+typedef struct ngx_pool_cleanup_s  ngx_pool_cleanup_t;
+
+struct ngx_pool_cleanup_s {
+    ngx_pool_cleanup_pt   handler;
+    void                 *data;
+    ngx_pool_cleanup_t   *next;
+};
+
+
+===========================ngx_create_pool===========================================
+ngx_create_pool(size_t size, ngx_log_t *log)
+若不支持posix_memalign(&p, 4096, 4096) 则ngx_memalign(alignment, size, log) =  ngx_alloc(size, log)
+   //#define NGX_DEFAULT_POOL_SIZE    (16 * 1024)
+    pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log);
+    			#define NGX_POOL_ALIGNMENT       16
+    		   p = ngx_memalign(NGX_POOL_ALIGNMENT, size, log);
+    		   			err = posix_memalign(&p, alignment, size);
+    		   			ngx_log_debug3(NGX_LOG_DEBUG_ALLOC, log, 0,
+                   "posix_memalign: %p:%uz @%uz", p, size, alignment);
+
+注意debug_alloc 参数的正确使用，才能看到日志中关于内存分配的记录
+
+1、按16 * 1024分配初始化内存
+2、将ngx_pool_data_t中last的值设置为起始内存加上整个结构体的长度（80） 
+    p->d.last = (u_char *) p + sizeof(ngx_pool_t);
+3、 将ngx_pool_data_t中end的值设置为内存块结尾
+    p->d.end = (u_char *) p + size;
+4、初始化其他结构体变量    
+    p->d.next = NULL;
+    p->d.failed = 0;
+5、设置可分配内存的大小，
+    size = size - sizeof(ngx_pool_t);
+6、设置后续分配内存的最大值，不能超过系统的页大小
+    p->max = (size < NGX_MAX_ALLOC_FROM_POOL) ? size : NGX_MAX_ALLOC_FROM_POOL;
+   #define NGX_MAX_ALLOC_FROM_POOL  (ngx_pagesize - 1)   
+   ngx_pagesize = getpagesize()：ngx_posix_init.c 
+7、初始化current 为起始地址 
+    p->current = p;
+8、初始化其他结构体变量     
+    p->chain = NULL;
+    p->large = NULL;
+    p->cleanup = NULL;
+    p->log = log;
+   
+=========================NGX_HAVE_POSIX_MEMALIGN============================================
+
+NGX_HAVE_POSIX_MEMALIGN in ngx_auto_config.h 
+
+#include <ngx_auto_config.h>
+
+#include <ngx_posix_config.h>
+
+#include <ngx_config.h>
+
+=========================指针对齐============================================
+指针对齐：
+#define ngx_align_ptr(p, a)                                                   \
+    (u_char *) (((uintptr_t) (p) + ((uintptr_t) a - 1)) & ~((uintptr_t) a - 1))
+    
+    
+
+
+======================ngx_pcalloc===============================
+初始化内存块的值为0
+ 
+     
+==============================ngx_palloc=======================================
+
+ngx_palloc(ngx_pool_t *pool, size_t size)
+
+1、关于返回值： 由于是在已经分配好的内存中返回可用地址，所以函数无需考虑内存分配失败的情况
+	 对于分配loage失败的情况，返回NULL
+2、若请求大于pool->max，则调用 ngx_palloc_large  ，设置ngx_pool_large_t
+	 主要对小于PGAESIZE的内存起作用，避免频繁申请释放小内存的操作
+3、获取当前pool->current到函数局部变量 
+    p = pool->current;
+4、 获取对齐地址，用于返回值
+    #define NGX_ALIGNMENT  16 // in ngx_auto_config.h
+    m = ngx_align_ptr(p->d.last, NGX_ALIGNMENT);    
+5、 若剩余空间可以容纳所需内存，则按对齐地址 + 实际分配内存大小，设置 p->d.last值  
+     if ((size_t) (p->d.end - m) >= size) {
+       p->d.last = m + size;
+6、 若剩余空间可以容纳所需内存，返回对齐后的地址
+       return m;
+7、 若剩余空间无法容纳所需内存，则尝试使用ngx_pool_data_t下一个POOL
+                p = p->d.next;
+8、 若ngx_pool_data_t下一个POOL 为空，则通过调用ngx_palloc_block(pool, size)增加块和内存
+    return ngx_palloc_block(pool, size);  
+    
+
+==============================ngx_palloc_large=======================================                  
+1、分配所需内存
+    p = ngx_alloc(size, pool->log);
+2、由于对于大内存支持单独释放，这里通过检查出已有释放的ngx_pool_large_t，复用
+    for (large = pool->large; large; large = large->next) {
+        if (large->alloc == NULL) {
+            large->alloc = p;
+            return p;
+        }
+3、当最近分配的大内存，连续三个都未释放，则往下走，直接分配新内存
+        if (n++ > 3) {
+            break;
+4、新分配一个ngx_pool_large_t ，到已申请的内存区域
+
+    large = ngx_palloc(pool, sizeof(ngx_pool_large_t));
+5、链接入ngx_pool_large_t链表
+    large->alloc = p;
+    large->next = pool->large;
+6、大结构中指向的是最新分配的 ngx_pool_large_t   
+    pool->large = large;
+6、返回地址
+    return p;
+    
+
+============================ngx_palloc_block=========================================   
+
+1、计算出实际缓冲内存区的大小，并分配内存ngx_pool_t
+    psize = (size_t) (pool->d.end - (u_char *) pool);
+    m = ngx_memalign(NGX_POOL_ALIGNMENT, psize, pool->log);
+    new = (ngx_pool_t *) m;
+    
+2、初始化数据块成员变量
+    new->d.end = m + psize;
+    new->d.next = NULL;
+    new->d.failed = 0;
+    
+3、计算出d.last ，起始地址加上ngx_pool_data_t结构大小
+    m += sizeof(ngx_pool_data_t);
+    m = ngx_align_ptr(m, NGX_ALIGNMENT);
+    new->d.last = m + size;
+    
+4、 获取当前CURRENT指针 
+    current = pool->current;
+    
+5、通过判断d.next的值来进行对d.failed的累积计数
+   找到第一个d.next为NULL的节点,在其过程中，将节点CURRENT指针设置为faile大于4的节点指向的下一个节点
+
+    for (p = current; p->d.next; p = p->d.next) {
+        if (p->d.failed++ > 4) {
+            current = p->d.next;
+        }
+    }
+6、将新申请的内存，挂入链表
+    p->d.next = new;
+7、若在d.failed的判断中设置了current的值或者初始值不为空，就使用它，否则设置为NEW
+    pool->current = current ? current : new;
+
+    return m;
+}
+
+
+======================ngx_pcalloc===============================
+初始化内存块的值为0
+ 
+
+
+    
+    
