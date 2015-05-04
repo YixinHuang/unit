@@ -8,13 +8,13 @@
 
 int unit_create_log()
 {
-    log = ngx_log_init(LOG_NAME);
-    if (log == NULL) {
+    mylog = ngx_log_init(LOG_NAME);
+    if (mylog == NULL) {
     		printf("ngx_log_init error.\n");
         return NGX_ERROR;
     }
-    //log->log_level = 0x7fffffff;//NGX_LOG_DEBUG_ALL;
-    log->log_level = NGX_LOG_DEBUG;
+    /* mylog->log_level = 0x7fffffff;//NGX_LOG_DEBUG_ALL; */
+    mylog->log_level = NGX_LOG_DEBUG;
     
     return NGX_OK;
 }
@@ -32,9 +32,9 @@ int unit_create_pool()
   	return NGX_ERROR;
   }
 
-  ngx_os_init(log); 
+  ngx_os_init(mylog); 
  		  
-  pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log); 
+  pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, mylog); 
   if (pool == NULL) {
       printf("ngx_create_pool error.\n");  
       return NGX_ERROR;

@@ -25,16 +25,21 @@ ngx_cleanup_callback(void *data)
 }
 
 
-#define LOG_NAME	"/bqmp/hyx/nginx-1.4.4/src/unit/bin"
-ngx_log_t          *log;
+static u_char *LOG_NAME="/bqmp/hyx/nginx-1.4.4/src/unit/bin";
+
+ngx_log_t          *mylog;
+
 int unit_create_log()
 {
-    log = ngx_log_init(LOG_NAME);
-    if (log == NULL) {
+    mylog = ngx_log_init(LOG_NAME);
+    if (mylog == NULL) {
     		printf("ngx_log_init error.\n");
-        return 1;
+        return NGX_ERROR;
     }
-    log->log_level = NGX_LOG_DEBUG_ALLOC;
+    /* mylog->log_level = 0x7fffffff;//NGX_LOG_DEBUG_ALL; */
+    mylog->log_level = NGX_LOG_DEBUG;
+    
+    return NGX_OK;
 }
 
 
@@ -87,9 +92,9 @@ main(int argc, char *const *argv)
    *The max will be size - sizeof(ngx_pool_t)
    */
    
-  ngx_os_init(log); 
+  ngx_os_init(mylog); 
   
-  ngx_log_error_core(NGX_LOG_NOTICE, log, 0,"ngx_create_pool size:%d", NGX_CYCLE_POOL_SIZE);
+  ngx_log_error_core(NGX_LOG_NOTICE, mylog, 0,"ngx_create_pool size:%d", NGX_CYCLE_POOL_SIZE);
 
 	printf("--System memory setting---------\n");  
   printf("Value of NGX_DEFAULT_POOL_SIZE size = %d\n", NGX_CYCLE_POOL_SIZE);   
@@ -107,7 +112,7 @@ main(int argc, char *const *argv)
   //#define NGX_DEFAULT_POOL_SIZE    (16 * 1024)  
   printf("ngx_create_pool using NGX_DEFAULT_POOL_SIZE size = %d\n", NGX_CYCLE_POOL_SIZE); 
 	printf("--------------------------------------\n");  
-  pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log); 
+  pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, mylog); 
   if (pool == NULL) {
       return NULL;
   }

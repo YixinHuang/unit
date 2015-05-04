@@ -23,6 +23,11 @@ void test_ngx_cpymem()
     p = ngx_copy(p, buf1.data,buf1.len);
     
     printf("Buff all: %s \n",phead);
+    
+    printf("NGX_PTR_SIZE is:[%d] \n",NGX_PTR_SIZE);
+    printf("value of -1 is:[%p] \n",(void *) -1);
+    printf("value of -16 is:[%p] \n",(void *) -16);
+    printf("value of 1 is:[%p] \n",(void *) 1);
 }
  
  
