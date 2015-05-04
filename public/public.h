@@ -17,5 +17,8 @@ static u_char *LOG_NAME=( u_char*)"/bqmp/hyx/nginx-1.4.4/src/unit/bin";
 ngx_log_t           *mylog;
 ngx_pool_t          *pool;
 
+int unit_create_log();
+int unit_create_pool();
+
 #endif /* _NGX_TEST_UNIT_ */
 

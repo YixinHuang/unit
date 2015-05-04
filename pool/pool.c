@@ -80,7 +80,7 @@ main(int argc, char *const *argv)
 	ngx_int_t rlt;
 	printf("--------pool Test---------\n");
   ngx_pool_t          *pool;
-  
+    int i=0;
   unit_create_log();  
   
   /*The the value of the ngx_pool_s.max be wrong if missing this call.
@@ -175,7 +175,7 @@ main(int argc, char *const *argv)
 
 
 #if (TEST_ngx_palloc_block)
-	for(int i=0;i<30;i++){
+	for(i=0;i<30;i++){
 			printf("--------Loop alloc block 1024 from the pool:[%d]--------\n",i);   	
 			printf("pool->d.last=%p,size of ngx_align_ptr(p, a) = %p\n",pool->d.last,ngx_align_ptr(pool->d.last, NGX_ALIGNMENT));  		
 			ret = ngx_palloc(pool, 4095); 

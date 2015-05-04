@@ -8,14 +8,14 @@
 
 #define TEST_ngx_list_init 0
 
-  
+int unit_create_pool();  
 ngx_list_t            *list; 
 
 void dump_list(ngx_list_t   *list) 
 {   
 	ngx_list_part_t 	*part;
 	void							*data;	
-	int 							 i,j;
+	ngx_uint_t      				i;
 	
   part = &list->part;
   data = part->elts;  	
@@ -32,7 +32,7 @@ void dump_list(ngx_list_t   *list)
 	    printf("========Move Next =============\n");   	 	    
 	    }
 	  	data = (char *) part->elts + list->size * i ;
-		  printf(" Loop %d adress:= %p, data:= %s\n",i, data,data);    
+		  printf(" Loop %d adress:= %p, data:= %s\n",(int)i, data,(char *)data);    
 	}
 }
   
@@ -41,7 +41,7 @@ int
 main(int argc, char *const *argv)
 {
   	printf("--------ngx_list_t Test---------\n");
-  	
+  	int i = 0;
   	void  *elts;
 
   	if (unit_create_pool()) {
@@ -61,12 +61,12 @@ main(int argc, char *const *argv)
 		list =  ngx_list_create(pool, 10, 100);
 #endif			
 		
-		for (int i = 0 ;i < 100; i++){
+		for (i = 0 ;i < 100; i++){
 				elts = ngx_list_push(list);
 				if(elts){
 				  
 				  sprintf(elts,"No %d",i);
-				  printf("push %d elements: elts=%p,data=%s ---------\n",i,elts,elts); 
+				  printf("push %d elements: elts=%p,data=%s ---------\n",i,elts,(char*)elts); 
 				}
 				else{
 				  printf("--------ngx_list_push error ---------\n");
