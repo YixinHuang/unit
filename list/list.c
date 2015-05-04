@@ -8,7 +8,6 @@
 
 #define TEST_ngx_list_init 0
 
-int unit_create_pool();  
 ngx_list_t            *list; 
 
 void dump_list(ngx_list_t   *list) 
