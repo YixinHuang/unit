@@ -22,10 +22,6 @@ int unit_create_log()
 
 int unit_create_pool()
 {
-	void   	*ret;
-	void   	*freeptr;
-	ngx_pool_t			*curptr;
-	ngx_int_t rlt;
   
   if(unit_create_log()){
     printf("unit_create_pool error.\n");
