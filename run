@@ -3,7 +3,9 @@
 # Unit test shell
 # opt
 
-if [ `uname` == "AIX" ];then
+NGX_VER=nginx-1.4.4
+if [ `uname` == "AIX" ]
+then
 	ostype=aix
 	CC=xlc	
 else
@@ -11,17 +13,25 @@ else
 	CC=gcc		
 fi
 
-export HOME_PATH=/bqmp/hyx
+gethomepath()
+{
+  currpath=`pwd`  
+  HOME_PATH=`echo $currpath |sed "s/\/$NGX_VER/    /g" |  awk '{print $1}'`  
+  echo "HOME_PATH:" $HOME_PATH  
+  export HOME_PATH=$HOME_PATH
+}
 
 usage()
 {
+  echo "current path:" $currpath
   echo "os type:" $ostype
-  echo "current path:" $HOME_PATH
+  echo "home path:" $HOME_PATH
   echo "current CC:" $CC  
 	echo "usage: run \"unitname\" make "
 	echo "usage: run \"unitname\"  "
 }
 
+gethomepath
 
 if [ $# -eq 0 ] 
 then
@@ -31,10 +41,10 @@ fi
 
 if [ $# -eq 1 ] 
 then
+  
 	UNAME=$1
 	echo "run unit $UNAME"
 	./bin/$UNAME
-
 	exit 1
 fi
 
@@ -44,7 +54,12 @@ then
 	UNAME=$1
 	MAKE=$2
 	cd ./$UNAME
-	$MAKE 
+	if [ "$ostype" == "aix" ]
+	then
+		$MAKE 
+	else
+		$MAKE -f Makefile.linux	
+	fi
 	cd ..
 	exit 1
 fi
