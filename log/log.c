@@ -7,7 +7,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-static u_char *LOG_NAME="/bqmp/hyx/nginx-1.4.4/src/unit/bin";
+static u_char *LOG_NAME=(u_char*)"/bqmp/hyx/nginx-1.4.4/src/unit/bin";
 
 ngx_log_t          *mylog;
 
@@ -31,7 +31,7 @@ main(int argc, char *const *argv)
 		printf("--------Start mylog Test---------\n");
 		int ret;
 		
-		unit_create_log();
+		ret=unit_create_log();
 		
 		if(mylog){
 
